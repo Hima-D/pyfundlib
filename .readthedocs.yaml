@@ -1,0 +1,16 @@
+version: 2
+
+sphinx:
+  configuration: docs/conf.py
+  fail_on_warning: false
+
+python:
+  version: "3.11"
+  install:
+    - method: pip
+      path: .
+
+formats:
+  - pdf
+  - epub
+  - htmlzip
