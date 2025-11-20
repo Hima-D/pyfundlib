@@ -1,20 +1,20 @@
 # .github/workflows/release.yaml
-name: Release
+name: Publish to PyPI
 
 on:
   push:
     tags:
-      - "v*.*.*"  # Trigger on tags like v0.1.4
+      - "v*.*.*"
 
 jobs:
-  build-and-publish:
+  publish:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write  # Required for trusted publishing
+      id-token: write     # REQUIRED for trusted publishing
+      contents: read
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -32,4 +32,5 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          skip-existing: true  # Avoids conflicts if version exists
+          skip-existing: true
+          verbose: true
