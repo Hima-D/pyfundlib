@@ -141,7 +141,7 @@ class MarketSimulator:
     @staticmethod
     def stress_scenario(
         returns: pd.Series,
-        scenarios: dict[str, Sequence[float]] = None,
+        scenarios: dict[str, Sequence[float] | None = None,
     ) -> pd.DataFrame:
         """
         Pre-defined historical stress scenarios.
@@ -156,8 +156,8 @@ class MarketSimulator:
             }
 
         results = {}
-        equity = 1.0
-        base_equity = (1 + returns).cumprod()
+        # equity = 1.0
+        base_# equity = (1 + returns).cumprod()
 
         for name, shocks in scenarios.items():
             shocked_returns = returns.copy()
@@ -209,7 +209,7 @@ class StrategySimulator:
 
             strategy = strategy_class(**params)
             signals = strategy.generate_signals(df)
-            equity = (1 + signals.shift(1) * df["Close"].pct_change()).cumprod()
+            # equity = (1 + signals.shift(1) * df["Close"].pct_change()).cumprod()
 
             results.append(
                 {

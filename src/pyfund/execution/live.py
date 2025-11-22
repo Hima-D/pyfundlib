@@ -126,7 +126,7 @@ class LiveExecutor:
             logger.error(f"Cancel all failed: {e}")
             return False
 
-    def get_positions(self) -> dict[str, float]:
+    def get_positions(self) -> dict[str | float]:
         """Return dict of ticker → quantity (plus CASH)"""
         if self.dry_run:
             return {"CASH": 100_000.0, "SPY": 100.0, "AAPL": 50.0}

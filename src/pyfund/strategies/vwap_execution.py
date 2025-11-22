@@ -45,7 +45,7 @@ class VWAPExecutor:
         self.executed_qty = 0.0
         self.vwap_price = 0.0
         self.slippage_bps = 0.0
-        self.schedule: dict[datetime, float] = {}
+        self.schedule: dict[datetime | float] = {}
 
     def _build_volume_profile(self) -> pd.Series:
         """Build average intraday volume profile from historical data"""
@@ -74,7 +74,7 @@ class VWAPExecutor:
         profile /= profile.sum()  # renormalize
         return profile
 
-    def generate_schedule(self) -> dict[datetime, float]:
+    def generate_schedule(self) -> dict[datetime | float]:
         """Generate execution schedule based on volume profile"""
         profile = self._build_volume_profile()
         adjusted_qty = self.total_quantity * self.urgency

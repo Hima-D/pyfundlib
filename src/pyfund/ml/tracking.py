@@ -49,7 +49,7 @@ class ModelTracker:
         model: BaseMLModel,
         artifact_path: str = "model",
         run_name: str | None = None,
-        tags: dict[str, str] | None = None,
+        tags: dict[str | str] | None = None,
     ) -> str:
         """Log a pyfundlib model to MLflow with full metadata"""
         with mlflow.start_run(

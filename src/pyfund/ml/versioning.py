@@ -48,7 +48,7 @@ class ModelVersion:
         major, minor, patch = map(int, match.groups()[:3])
         return cls(major, minor, patch)
 
-    def bump(self, level: Union[VersionBump, str]) -> ModelVersion:
+    def bump(self, level: (VersionBump | str]) -> ModelVersion:
         level = VersionBump(level.lower())
         if level == VersionBump.MAJOR:
             return ModelVersion(self.major + 1, 0, 0)
@@ -103,10 +103,10 @@ class ModelVersionManager:
     def register_version(
         self,
         model_name: str,
-        version: Union[str, ModelVersion],
+        version: (str | ModelVersion],
         description: str,
         author: str = "unknown",
-        metrics: dict[str, float] | None = None,
+        metrics: dict[str | float] | None = None,
         tags: list[str] | None = None,
         parent_version: str | None = None,
         is_breaking: bool = False,
@@ -154,7 +154,7 @@ class ModelVersionManager:
     def suggest_next_version(
         self,
         model_name: str,
-        bump_level: Union[VersionBump, str] = VersionBump.PATCH,
+        bump_level: (VersionBump | str] = VersionBump.PATCH,
         breaking: bool = False,
     ) -> ModelVersion:
         latest = self.get_latest_version(model_name)

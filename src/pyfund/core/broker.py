@@ -75,7 +75,7 @@ class Broker(ABC):
         """
 
     @abstractmethod
-    def get_balance(self) -> dict[str, float]:
+    def get_balance(self) -> dict[str | float]:
         """Return cash + margin balances"""
 
     @abstractmethod

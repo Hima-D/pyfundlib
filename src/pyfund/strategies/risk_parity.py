@@ -36,8 +36,8 @@ class RiskParityAllocator:
         self.max_leverage = max_leverage
         self.rebalance_freq = rebalance_freq
 
-        self.weights: dict[str, float] = {}
-        self.risk_contributions: dict[str, float] = {}
+        self.weights: dict[str | float] = {}
+        self.risk_contributions: dict[str | float] = {}
 
     def _fetch_returns(self) -> pd.DataFrame:
         """Fetch price data and compute log returns"""
@@ -76,7 +76,7 @@ class RiskParityAllocator:
         diff = rc - target * rc.sum()
         return (diff**2).sum()
 
-    def allocate(self) -> dict[str, float]:
+    def allocate(self) -> dict[str | float]:
         """Main allocation function"""
         returns = self._fetch_returns()
         if returns.empty or len(returns.columns) < 2:
@@ -119,12 +119,12 @@ class RiskParityAllocator:
             weights = weights * (self.max_leverage / total_leverage)
 
         # Final weights
-        self.weights = {ticker: float(w) for ticker, w in zip(strict=True, self.tickers, weights)}
+        self.weights = {ticker: float(w) for ticker, w in zip(self.tickers, weights)}
 
         # Risk contributions
         rc = self._risk_contribution(weights, cov_matrix)
         rc_pct = rc / rc.sum()
-        self.risk_contributions = {ticker: float(r) for ticker, r in zip(strict=True, self.tickers, rc_pct)}
+        self.risk_contributions = {ticker: float(r) for ticker, r in zip(self.tickers, rc_pct)}
 
         return self.weights
 

@@ -30,7 +30,7 @@ class ModelMetadata:
     training_samples: int | None = None
     features_used: list[str] | None = None
     target_column: str | None = None
-    performance_metrics: dict[str, float] | None = None
+    performance_metrics: dict[str | float] | None = None
     hyperparameters: dict[str, Any] | None = None
     status: ModelStatus = "untrained"
     tags: list[str] | None = None

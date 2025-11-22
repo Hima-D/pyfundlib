@@ -19,7 +19,7 @@ from .feature_pipeline import FeaturePipeline
 
 logger = get_logger(__name__)
 
-MetricFunc = Callable[[np.ndarray, np.ndarray], float]
+MetricFunc = Callable[[np.ndarray, np.ndarray] | float]
 
 
 @dataclass

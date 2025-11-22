@@ -21,7 +21,7 @@ class RiskConstraints:
         self.max_volatility = max_volatility
         self.leverage_limit = leverage_limit
 
-    def check_compliance(self, weights: pd.Series, sector_map: dict[str, str]) -> dict[str, Any]:
+    def check_compliance(self, weights: pd.Series, sector_map: dict[str | str]) -> dict[str, Any]:
         violations = []
 
         # Position concentration

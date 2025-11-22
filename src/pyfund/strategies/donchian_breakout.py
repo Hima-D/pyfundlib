@@ -71,11 +71,11 @@ class DonchianBreakoutStrategy(BaseStrategy):
         position = 0.0
 
         for i in range(1, len(data)):
-            idx = data.index[i]
-            prev_idx = data.index[i - 1]
+            # idx = data.index[i]
+            prev_  # idx = data.index[i - 1]
 
             price = close.iloc[i]
-            prev_price = close.iloc[i - 1]
+            # prev_price = close.iloc[i - 1]
 
             long_entry = price > upper_channel.iloc[i - 1]
             short_entry = price < lower_channel.iloc[i - 1]

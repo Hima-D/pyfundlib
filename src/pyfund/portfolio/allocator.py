@@ -17,12 +17,12 @@ AllocationMethod = Literal[
 class AllocationResult:
     """Rich allocation output with full transparency"""
 
-    weights: dict[str, float]  # Final target weights
-    raw_weights: dict[str, float]  # Pre-normalized weights
+    weights: dict[str | float]  # Final target weights
+    raw_weights: dict[str | float]  # Pre-normalized weights
     method: str  # Allocation method used
     total_leverage: float  # Gross exposure (sum |w|)
-    risk_contributions: dict[str, float] | None = None
-    metadata: dict[str, Any] = None
+    risk_contributions: dict[str | float] | None = None
+    metadata: dict[str, Any | None = None
 
     def __post_init__(self):
         if self.metadata is None:
@@ -79,13 +79,13 @@ class PortfolioAllocator(BaseAllocator):
         np.fill_diagonal(prior, np.diag(cov))
         return (1 - shrinkage) * cov + shrinkage * prior
 
-    def _equal_weight(self, active: list[str]) -> dict[str, float]:
+    def _equal_weight(self, active: list[str]) -> dict[str | float]:
         weight = 1.0 / len(active) if active else 0.0
         return {t: weight for t in active}
 
     def _equal_risk_contribution(
         self, returns: pd.DataFrame, active: list[str]
-    ) -> dict[str, float]:
+    ) -> dict[str | float]:
         """ERC - each asset contributes equally to portfolio risk"""
         sub_returns = returns[active]
         cov = self._calculate_covariance(sub_returns)
@@ -115,9 +115,9 @@ class PortfolioAllocator(BaseAllocator):
         except Exception as e:
             weights = np.ones(len(active)) / len(active)
 
-        return dict(zip(strict=True, active, weights))
+        return dict(zip(active, weights))
 
-    def _inverse_volatility(self, returns: pd.DataFrame, active: list[str]) -> dict[str, float]:
+    def _inverse_volatility(self, returns: pd.DataFrame, active: list[str]) -> dict[str | float]:
         """Weight inversely proportional to volatility"""
         vols = returns[active].std() * np.sqrt(252)
         inv_vol = 1.0 / vols.replace(0, np.nan)

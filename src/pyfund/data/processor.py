@@ -24,7 +24,7 @@ class DataProcessor:
         *,
         closed: Literal["left", "right"] = "left",
         label: Literal["left", "right"] = "left",
-        custom_agg: dict[str, str] | None = None,
+        custom_agg: dict[str | str] | None = None,
         min_periods: int = 1,
     ) -> DataFrame:
         """

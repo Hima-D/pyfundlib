@@ -35,7 +35,7 @@ class ARIMAGARCHStrategy:
     def _prepare_series(self, prices: pd.Series) -> pd.Series:
         return np.log(prices) if self.use_log_prices else prices.copy()
 
-    def fit_forecast(self, prices: pd.Series) -> tuple[float, float, float]:
+    def fit_forecast(self, prices: pd.Series) -> tuple[float, float | float]:
         if len(prices) < self.min_periods:
             return prices.iloc[-1], prices.std(), prices.std()
 

@@ -24,7 +24,7 @@ class BacktestResult:
     equity_curve: pd.Series
     signals: pd.Series
     trades: pd.DataFrame
-    metrics: dict[str, float]
+    metrics: dict[str | float]
     data: pd.DataFrame
 
 
@@ -117,7 +117,7 @@ class Backtester:
         entry_price = entry_date = None
         direction = 0
 
-        for date, (pos, _ret) in enumerate(zip(strict=True, position, returns)):
+        for date, (pos, _ret) in enumerate(zip(position, returns)):
             if pos != direction and pos != 0:
                 # Entry
                 if entry_price is not None:
@@ -195,6 +195,6 @@ class Backtester:
 
         logger.info(f"Full report saved → {save_dir}")
 
-    def summary(self) -> dict[str, float]:
+    def summary(self) -> dict[str | float]:
         result = self.run()
         return result.metrics

@@ -83,7 +83,7 @@ class StatisticalValidator:
         results = []
         i = self.config["wf_train_window"]
         while i + self.config["wf_test_window"] <= len(returns):
-            train = returns.iloc[i - self.config["wf_train_window"] : i]
+            # train = returns.iloc[i - self.config["wf_train_window"] : i]
             test = returns.iloc[i : i + self.config["wf_test_window"]]
             if test.std() > 1e-8:
                 results.append(

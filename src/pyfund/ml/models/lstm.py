@@ -38,7 +38,7 @@ class LSTMModel(BaseMLModel, nn.Module):
 
     def __init__(
         self,
-        X.shape[1] if len(X.shape) > 1 else 1: int = 20,
+        input_size: int = 20,
         hidden_size: int = 128,
         num_layers: int = 3,
         dropout: float = 0.3,
@@ -53,7 +53,7 @@ class LSTMModel(BaseMLModel, nn.Module):
         BaseMLModel.__init__(self, name=name, version=version, tags=["lstm", "deep-learning", task])
         nn.Module.__init__(self)
 
-        self.X.shape[1] if len(X.shape) > 1 else 1 = X.shape[1] if len(X.shape) > 1 else 1
+        self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.dropout = dropout
@@ -66,7 +66,7 @@ class LSTMModel(BaseMLModel, nn.Module):
 
         # Architecture
         self.lstm = nn.LSTM(
-            X.shape[1] if len(X.shape) > 1 else 1=X.shape[1] if len(X.shape) > 1 else 1,
+            input_size=input_size,
             hidden_size=hidden_size,
             num_layers=num_layers,
             batch_first=True,
@@ -169,7 +169,9 @@ class LSTMModel(BaseMLModel, nn.Module):
 
         self._is_fitted = True
         self.feature_names_in_ = (
-            list(range(X.shape[1] if len(X.shape) > 1 else 1)) if isinstance(X, np.ndarray) else list(X.columns)
+            list(range(X.shape[1] if len(X.shape) > 1 else 1))
+            if isinstance(X, np.ndarray)
+            else list(X.columns)
         )
         self.metadata.training_samples = len(y)
         self.metadata.performance_metrics = {"final_val_loss": best_loss}

@@ -55,7 +55,7 @@ class MarketMakingStrategy(BaseStrategy):
 
     def _calculate_quotes(
         self, mid_price: float, volatility: float
-    ) -> tuple[float, float, float, float]:
+    ) -> tuple[float, float, float | float]:
         """Calculate bid/ask prices and sizes with inventory skew"""
         base_spread = self.params["base_spread_bps"] / 10000
         vol_spread = self.params["gamma"] * volatility**2

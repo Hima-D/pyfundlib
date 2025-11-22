@@ -59,8 +59,8 @@ class FeaturePipeline:
 
     def add_technical_indicators(
         self,
-        rsi_periods: list[int] = None,
-        sma_periods: list[int] = None,
+        rsi_periods: list[int | None = None,
+        sma_periods: list[int | None = None,
         macd_params: tuple = (12, 26, 9),
         include_volume: bool = True,
     ) -> FeaturePipeline:
@@ -96,8 +96,8 @@ class FeaturePipeline:
 
     def add_returns_and_volatility(
         self,
-        return_periods: list[int] = None,
-        vol_windows: list[int] = None,
+        return_periods: list[int | None = None,
+        vol_windows: list[int | None = None,
         annualize_vol: bool = True,
     ) -> FeaturePipeline:
         return_periods = return_periods or [1, 5, 10, 20]
@@ -127,7 +127,7 @@ class FeaturePipeline:
     def add_lags(
         self,
         columns: list[str],
-        lags: list[int] = None,
+        lags: list[int | None = None,
     ) -> FeaturePipeline:
         lags = lags or [1, 2, 3, 5, 10]
 
@@ -143,8 +143,8 @@ class FeaturePipeline:
     def add_rolling_stats(
         self,
         columns: list[str],
-        windows: list[int] = None,
-        stats: list[str] = None,
+        windows: list[int | None = None,
+        stats: list[str | None = None,
     ) -> FeaturePipeline:
         windows = windows or [5, 10, 20, 60]
         stats = stats or ["mean", "std", "min", "max"]

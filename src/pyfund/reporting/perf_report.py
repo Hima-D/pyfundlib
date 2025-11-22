@@ -78,7 +78,7 @@ class PerformanceReport:
             print(f"Report saved to {output_path}")
         plt.show()
 
-    def summary(self) -> dict[str, float]:
+    def summary(self) -> dict[str | float]:
         """Return dictionary of all key performance metrics."""
         return {
             "Total Return": self._total_return(),

@@ -39,7 +39,7 @@ class PairsTradingStrategy(BaseStrategy):
         self.spread_std: float = 1.0
         self.is_cointegrated: bool = False
 
-    def _check_cointegration(self, price_a: pd.Series, price_b: pd.Series) -> tuple[bool, float]:
+    def _check_cointegration(self, price_a: pd.Series, price_b: pd.Series) -> tuple[bool | float]:
         """Test for cointegration using Engle-Granger"""
         if len(price_a) != len(price_b):
             return False, 1.0

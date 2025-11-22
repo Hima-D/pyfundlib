@@ -35,7 +35,7 @@ class TriangularArbitrageStrategy:
             f"{self.intermediate}{self.quote}",  # e.g., ETHUSDT
         ]
 
-    def _fetch_prices(self) -> dict[str, dict[str, float]]:
+    def _fetch_prices(self) -> dict[str, dict[str | float]]:
         """Fetch latest bid/ask prices for all three pairs"""
         prices = {}
         for pair in self.pairs:
@@ -51,7 +51,7 @@ class TriangularArbitrageStrategy:
                 return {}
         return prices
 
-    def _forward_arbitrage(self, prices: dict) -> tuple[float, str]:
+    def _forward_arbitrage(self, prices: dict) -> tuple[float | str]:
         """Start with quote currency → try to end with more quote"""
         try:
             # Step 1: Buy intermediate with base (e.g., buy ETH with BTC)
@@ -70,7 +70,7 @@ class TriangularArbitrageStrategy:
         except:
             return 0.0, "forward"
 
-    def _reverse_arbitrage(self, prices: dict) -> tuple[float, str]:
+    def _reverse_arbitrage(self, prices: dict) -> tuple[float | str]:
         """Start with quote → opposite direction"""
         try:
             # Reverse path

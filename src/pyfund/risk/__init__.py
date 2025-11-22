@@ -132,7 +132,7 @@ class RiskManager:
         return min(scaling, leverage_cap)
 
     @staticmethod
-    def risk_metrics(equity_curve: pd.Series) -> dict[str, float]:
+    def risk_metrics(equity_curve: pd.Series) -> dict[str | float]:
         """One-call risk summary"""
         returns = equity_curve.pct_change().dropna()
         cagr = (equity_curve.iloc[-1] / equity_curve.iloc[0]) ** (252 / len(equity_curve)) - 1

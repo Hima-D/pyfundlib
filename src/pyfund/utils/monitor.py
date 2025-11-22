@@ -51,7 +51,7 @@ class Monitor:
             try:
                 row[name] = func() if callable(func) else func
             except Exception as e:
-                row[name] = None
+                row[name | None = None
                 logger.warning(f"Metric {name} failed: {e}")
         row["datetime"] = datetime.now()
         self.history = pd.concat([self.history, pd.DataFrame([row])], ignore_index=True)
