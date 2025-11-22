@@ -10,29 +10,6 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "Himanshu Dixit", email = "hima@pyfund.tech" }]
-keywords = [
-  "algorithmic-trading",
-  "quantitative-finance",
-  "backtesting",
-  "machine-learning",
-  "live-trading",
-  "portfolio-optimization",
-  "automated-trading",
-  "ml-alpha",
-  "econometrics",
-]
-classifiers = [
-  "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13",
-  "License :: OSI Approved :: MIT License",
-  "Operating System :: OS Independent",
-  "Intended Audience :: Developers",
-  "Intended Audience :: Financial and Insurance Industry",
-  "Development Status :: 5 - Production/Stable",
-]
 
 dependencies = [
   "pandas>=2.0.0",
@@ -63,7 +40,7 @@ dev = [
 ]
 
 broker = [
-  ""alpaca-py==0.28.0 ; python_version >= "3.10""",
+  "alpaca-py==0.28.0",
   "kiteconnect>=4.4.0",
 ]
 
@@ -100,6 +77,3 @@ ignore = ["E501"]
 [tool.mypy]
 python_version = "3.10"
 strict = true
-warn_unused_ignores = true
-warn_redundant_casts = true
-warn_unused_configs = true
