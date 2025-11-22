@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pyfundlib"
-dynamic = ["version"]
+version = "0.1.4"
 description = "End-to-End Python Framework for Algorithmic Trading: Backtesting, ML Alpha, Live Execution & Automation"
 readme = "README.md"
 requires-python = ">=3.10"                  # Drop 3.9 — torch dropped support in 2.4+
@@ -67,18 +67,18 @@ dev = [
 ]
 # Optional: extra performance / broker packages
 broker = [
-  "alpaca-py>=3.0",
-  "kiteconnect>=4.0",                        # Zerodha
+  "alpaca-py>=3.0 ; python_version >= "3.10"",
+  "kiteconnect>=4.4.0",                        # Zerodha
   # "ib_insync",                             # uncomment when ready
 ]
-full = ["pyfundlib[dev,broker]"]
+full = ["pyfundlib[dev]", "pyfundlib[broker]"]
 
 [project.urls]
 Homepage = "https://pyfund.tech"
-Documentation = "https://pyfund.tech/docs"
-Repository = "https://github.com/hima-d/pyfundlib"
-Issues = "https://github.com/hima-d/pyfundlib/issues"
-Changelog = "https://github.com/hima-d/pyfundlib/releases"
+Documentation = "https://pyfundlib.readthedocs.io/en/latest/"
+Repository = "https://github.com/Hima-D/pyfundlib"
+Issues = "https://github.com/Hima-D/pyfundlib/issues"
+Changelog = "https://github.com/Hima-D/pyfundlib/releases"
 
 [project.scripts]
 pyfundlib = "pyfundlib.cli:main"             # ← match your package name
