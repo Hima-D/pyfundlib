@@ -76,17 +76,14 @@ class BaseMLModel(ABC):
     @abstractmethod
     def fit(self, X: pd.DataFrame | np.ndarray, y: pd.Series | np.ndarray) -> BaseMLModel:
         """Train the model. Returns self for chaining."""
-        pass
 
     @abstractmethod
     def predict(self, X: pd.DataFrame | np.ndarray) -> np.ndarray:
         """Return raw predictions (regression) or probabilities (classification)"""
-        pass
 
     @abstractmethod
     def predict_proba(self, X: pd.DataFrame | np.ndarray) -> np.ndarray:
         """Return class probabilities (for classifiers only)"""
-        pass
 
     # ======================= Serialization (Best-in-Class) =======================
     def save(self, path: str | Path) -> None:

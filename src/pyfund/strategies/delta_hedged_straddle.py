@@ -74,7 +74,7 @@ class DeltaHedgedStraddleStrategy(BaseStrategy):
                 "iv": round(iv, 3),
                 "dte": dte,
             }
-        except Exception as e:
+        except Exception:
             return None
 
     def generate_signals(self, data: pd.DataFrame) -> pd.Series:

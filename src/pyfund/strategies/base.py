@@ -68,7 +68,6 @@ class BaseStrategy(ABC):
 
     def _validate_params(self, params: dict[str, Any]) -> None:
         """Override in subclass for custom validation"""
-        pass
 
     @abstractmethod
     def generate_signals(self, data: pd.DataFrame) -> SignalResult:
@@ -82,7 +81,6 @@ class BaseStrategy(ABC):
         Returns:
             SignalResult containing aligned signal series and metadata
         """
-        pass
 
     # ===================================================================
     # Helper methods that most strategies will want to use or override

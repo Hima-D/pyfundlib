@@ -18,19 +18,13 @@ BrokerMode = Literal["live", "paper", "backtest"]
 class BrokerError(Exception):
     """Base exception for all broker-related errors"""
 
-    pass
-
 
 class AuthenticationError(BrokerError):
     """Raised when broker authentication fails"""
 
-    pass
-
 
 class OrderError(BrokerError):
     """Raised when order placement fails"""
-
-    pass
 
 
 class Broker(ABC):
@@ -58,12 +52,10 @@ class Broker(ABC):
     @abstractmethod
     def connect(self) -> None:
         """Establish connection and authenticate"""
-        pass
 
     @abstractmethod
     def disconnect(self) -> None:
         """Clean shutdown"""
-        pass
 
     @abstractmethod
     def get_price(
@@ -81,12 +73,10 @@ class Broker(ABC):
         ['Open', 'High', 'Low', 'Close', 'Volume']
         Index: DatetimeIndex (timezone-aware if possible)
         """
-        pass
 
     @abstractmethod
     def get_balance(self) -> dict[str, float]:
         """Return cash + margin balances"""
-        pass
 
     @abstractmethod
     def get_positions(self) -> dict[str, dict[str, Any]]:
@@ -94,7 +84,6 @@ class Broker(ABC):
         Return current positions with full details
         Example: {"RELIANCE": {"qty": 100, "avg_price": 2500.0, "pnl": 5000.0}}
         """
-        pass
 
     @abstractmethod
     def place_order(
@@ -111,7 +100,6 @@ class Broker(ABC):
         Place order and return order confirmation
         Should raise OrderError on failure
         """
-        pass
 
     @abstractmethod
     def cancel_order(self, order_id: str) -> bool:
@@ -120,7 +108,6 @@ class Broker(ABC):
     @abstractmethod
     def cancel_all_orders(self) -> int:
         """Cancel all open orders, return count canceled"""
-        pass
 
     @abstractmethod
     def get_open_orders(self) -> list[dict[str, Any]]:

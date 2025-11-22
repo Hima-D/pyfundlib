@@ -66,7 +66,7 @@ class ModelVersion:
         return base
 
     def __repr__(self) -> str:
-        return f"ModelVersion({str(self)})"
+        return f"ModelVersion({self!s})"
 
     def __lt__(self, other: ModelVersion) -> bool:
         return (self.major, self.minor, self.patch) < (other.major, other.minor, other.patch)

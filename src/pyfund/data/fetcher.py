@@ -7,7 +7,9 @@ from typing import Any, Literal
 import pandas as pd
 import yfinance as yf
 
-from ..core.broker_registry import broker_registry  # You'll create this next if not exists
+from ..core.broker_registry import (
+    broker_registry,  # You'll create this next if not exists
+)
 from ..utils.cache import cached_function
 
 Interval = Literal[
@@ -92,7 +94,6 @@ class DataFetcher:
             if auto_adjust:
                 df = df.xs("Close", axis=1, level=1, drop_level=True).pct_change().add(1).cumprod()
                 # Better to re-fetch adjusted properly — but this is fallback
-                pass
 
         # Final cleanup
         df = df[["Open", "High", "Low", "Close", "Volume"]].dropna(how="all")

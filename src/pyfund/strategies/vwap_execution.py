@@ -56,7 +56,7 @@ class VWAPExecutor:
                 df = df.between_time(self.start_time, self.end_time)
                 df["time"] = df.index.time
                 dfs.append(df)
-            except Exception as e:
+            except Exception:
                 continue
 
         if not dfs:
@@ -136,7 +136,7 @@ class VWAPExecutor:
                 current_price = DataFetcher.get_price(self.ticker, period="1d", interval="1m")[
                     "Close"
                 ].iloc[-1]
-            except Exception as e:
+            except Exception:
                 current_price = 100.0  # fallback
 
             self.execute_slice(qty, current_price)

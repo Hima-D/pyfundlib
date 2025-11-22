@@ -92,7 +92,7 @@ class PairsTradingStrategy(BaseStrategy):
             try:
                 df_a = DataFetcher.get_price(self.ticker_a, period="5y")["Close"]
                 df_b = DataFetcher.get_price(self.ticker_b, period="5y")["Close"]
-            except Exception as e:
+            except Exception:
                 return pd.Series(0, index=data.index)
 
             common_index = df_a.index.intersection(df_b.index)

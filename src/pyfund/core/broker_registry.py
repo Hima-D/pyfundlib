@@ -115,9 +115,9 @@ _auto_discover_brokers()
 
 # Make it pretty
 __all__ = [
-    "register_broker",
+    "Broker",
+    "clear_registry",
     "get_broker",
     "list_available_brokers",
-    "clear_registry",
-    "Broker",
+    "register_broker",
 ]
