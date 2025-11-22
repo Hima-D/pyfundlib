@@ -63,7 +63,7 @@ dev = [
 ]
 
 broker = [
-  "alpaca-py>=3.0",
+  "alpaca-py>=2.1.0",
   "kiteconnect>=4.4.0",
 ]
 
