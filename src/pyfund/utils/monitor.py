@@ -32,10 +32,11 @@ class Monitor:
         self.history: pd.DataFrame = pd.DataFrame()
         self.stop_event = Event()
         self.thread: Thread | None = None
+        self.start_time: float | None = None
 
         # Built-in system metrics
         self.register_metric("cpu_percent", psutil.cpu_percent)
-        self.register_metric("ram_percent", psutil.virtual_memory().percent)
+        self.register_metric("ram_percent", lambda: psutil.virtual_memory().percent)
         self.register_metric("disk_usage", lambda: psutil.disk_usage("/").percent)
         self.register_metric("timestamp", datetime.now)
 
@@ -51,7 +52,7 @@ class Monitor:
             try:
                 row[name] = func() if callable(func) else func
             except Exception as e:
-                row[name | None = None
+                row[name] = None
                 logger.warning(f"Metric {name} failed: {e}")
         row["datetime"] = datetime.now()
         self.history = pd.concat([self.history, pd.DataFrame([row])], ignore_index=True)
@@ -67,12 +68,14 @@ class Monitor:
                 continue
             print(f" {k:20} | {v}")
         print("-" * 60)
-
     def start(self, daemon: bool = True) -> None:
         """Start background monitoring thread"""
         if self.thread and self.thread.is_alive():
             logger.warning("Monitor already running")
             return
+
+        # record start time for uptime calculation
+        self.start_time = time.time()
 
         def _run():
             logger.info(f"Monitor started (refresh every {self.refresh_interval}s)")
@@ -81,6 +84,7 @@ class Monitor:
 
         self.thread = Thread(target=_run, daemon=daemon)
         self.thread.start()
+        logger.info("Real-time monitoring ACTIVE")
         logger.info("Real-time monitoring ACTIVE")
 
     def stop(self) -> None:
@@ -116,7 +120,7 @@ monitor = Monitor(refresh_interval=10)
 
 # Example: How users extend it
 def track_portfolio_value():
-    from pyfundlib.execution.live import LiveExecutor
+    from execution.live import LiveExecutor
 
     try:
         executor = LiveExecutor(dry_run=True)
@@ -129,14 +133,11 @@ def track_active_signals():
     # Replace with your strategy's current signal
     return "RSI Oversold → BUY AAPL"
 
+def _uptime_seconds() -> float:
+    st = getattr(monitor, "start_time", None)
+    return time.time() - st if st is not None else 0.0
 
-# Register in your main/live script
-monitor.register_metric("portfolio_value", track_portfolio_value)
-monitor.register_metric("current_signal", track_active_signals)
-monitor.register_metric(
-    "uptime_seconds",
-    lambda: time.time() - monitor.start_time if hasattr(monitor, "start_time") else 0,
-)
+monitor.register_metric("uptime_seconds", _uptime_seconds)
 
 # Start it!
 monitor.start()

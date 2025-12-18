@@ -7,7 +7,7 @@ from typing import Any, Literal
 
 import pandas as pd
 
-from ..core.broker_registry import broker_registry
+from ..core.broker_registry import register_broker as broker_registry
 from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -126,11 +126,10 @@ class LiveExecutor:
             logger.error(f"Cancel all failed: {e}")
             return False
 
-    def get_positions(self) -> dict[str | float]:
+    def get_positions(self) -> dict[str, float]:
         """Return dict of ticker → quantity (plus CASH)"""
         if self.dry_run:
             return {"CASH": 100_000.0, "SPY": 100.0, "AAPL": 50.0}
-
         try:
             positions = self.client.get_positions()
             logger.debug(f"Retrieved {len(positions)} positions")

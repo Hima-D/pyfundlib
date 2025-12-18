@@ -1,0 +1,29 @@
+name: "Momentum Alpha"
+description: "ML-powered momentum strategy for US mega-caps"
+enabled: true
+
+watchlist:
+  - AAPL
+  - NVDA
+  - TSLA
+  - MSFT
+  - AMD
+  - SPY
+  - QQQ
+  - SMCI
+  - META
+  - NFLX
+
+data_period: "3y"
+prediction_window: 252
+min_data_points: 300
+
+signal_threshold:
+  strong: 0.65
+  medium: 0.35
+
+alerting:
+  strong_only: true
+  channels:
+    - telegram
+    - discord

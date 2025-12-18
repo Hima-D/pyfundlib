@@ -43,7 +43,8 @@ def register_broker(
                     print(f"Warning: Overriding existing broker '{broker_name}'")
 
             _BROKER_REGISTRY[broker_name] = cls
-            cls._registered_name = broker_name  # For debugging
+            # store registered name on the class for debugging; use setattr to satisfy static type checkers
+            setattr(cls, "_registered_name", broker_name)  # For debugging
 
         return cls
 

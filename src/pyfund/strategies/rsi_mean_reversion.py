@@ -1,11 +1,12 @@
 # src/pyfund/strategies/rsi_mean_reversion.py
 from typing import Any
 
+import inspect
 import numpy as np
 import pandas as pd
 
 from ..indicators.rsi import rsi
-from .base import BaseStrategy
+from base import BaseStrategy
 
 
 class RSIMeanReversionStrategy(BaseStrategy):
@@ -52,16 +53,40 @@ class RSIMeanReversionStrategy(BaseStrategy):
         """
         if len(data) < self.params["rsi_window"] + 20:
             return pd.Series(0, index=data.index)
-
         close = data["Close"]
         high = data["High"]
         low = data["Low"]
 
-        rsi_series = rsi(close, self.params["rsi_window"])
+        # Dynamically call rsi() according to its signature so we don't pass unexpected positional args.
+        try:
+            sig = inspect.signature(rsi)
+            param_names = list(sig.parameters.keys())
+
+            # If common named window/period parameter exists, pass it as a keyword.
+            kw_name = next((n for n in ("window", "period", "length", "timeperiod", "n") if n in param_names), None)
+
+            if kw_name:
+                rsi_series = rsi(close, **{kw_name: self.params["rsi_window"]})
+            else:
+                # If rsi only expects a single series argument, call with just the series.
+                if len(param_names) == 1:
+                    rsi_series = rsi(close)
+                else:
+                    # Fallback: try common keyword 'window' then plain call.
+                    try:
+                        rsi_series = rsi(close, window=self.params["rsi_window"])
+                    except TypeError:
+                        rsi_series = rsi(close)
+        except Exception:
+            # On any unexpected issue, fall back to single-argument call.
+            rsi_series = rsi(close)
+
+        signals = pd.Series(0, index=data.index)
         signals = pd.Series(0, index=data.index)
 
         # Volatility filter (ATR-based or std dev)
-        returns = np.log(close / close.shift(1))
+        # ensure 'returns' is a pandas Series so .rolling is available to the type checker
+        returns = (close / close.shift(1)).apply(lambda x: np.log(x) if pd.notnull(x) else np.nan)
         volatility = returns.rolling(self.params["vol_window"]).std()
         avg_vol = volatility.mean()
         current_vol_ratio = volatility / avg_vol

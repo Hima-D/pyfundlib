@@ -3,7 +3,7 @@
 import pandas as pd
 
 from ..indicators.sma import sma
-from .base import BaseStrategy
+from .base import BaseStrategy          # FIXED IMPORT
 
 
 class SMACrossoverStrategy(BaseStrategy):

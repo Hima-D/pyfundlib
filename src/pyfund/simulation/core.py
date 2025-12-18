@@ -60,10 +60,10 @@ class CustomSimulator:
 
     def register_default_simulators(self):
         """Built-in simulators"""
-        from .bootstrap import bootstrap_simulator
-        from .gbm import gbm_simulator
-        from .heston import heston_simulator
-        from .jump_diffusion import jump_diffusion_simulator
+        from bootstrap import bootstrap_simulator
+        from gbm import gbm_simulator
+        from heston import heston_simulator
+        from jump_diffusion import jump_diffusion_simulator
 
         self.register_simulator("gbm", gbm_simulator)
         self.register_simulator("jump_diffusion", jump_diffusion_simulator)

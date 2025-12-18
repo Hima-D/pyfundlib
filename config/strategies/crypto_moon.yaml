@@ -1,0 +1,20 @@
+name: "Crypto Moon Mission"
+description: "Aggressive signals for Bitcoin & Ethereum"
+enabled: true
+
+watchlist:
+  - BTC-USD
+  - ETH-USD
+  - SOL-USD
+  - ADA-USD
+
+data_period: "max"
+prediction_window: 180
+min_data_points: 100
+
+signal_threshold:
+  strong: 0.75
+  medium: 0.45
+
+alerting:
+  strong_only: false   # Alert on all buys/sells

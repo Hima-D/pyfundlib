@@ -1,158 +1,195 @@
-# src/pyfund/strategies/ml_random_forest.py
-from typing import Any
+from __future__ import annotations
+from typing import Any, Optional
 
 import pandas as pd
 
 from ..data.features import FeatureEngineer
 from ..ml.predictor import MLPredictor
 from ..utils.logger import logger
-from .base import BaseStrategy
+from base import BaseStrategy
 
 
 class MLRandomForestStrategy(BaseStrategy):
     """
-    Advanced Machine Learning Strategy using Random Forest (or any loaded model)
+    A machine-learning trading strategy using Random Forest (or any ML model).
 
-    Features:
-    - Automatic feature engineering fallback
-    - Model version safety (handles missing/no model gracefully)
-    - Probability-based signals with confidence threshold
-    - Position sizing based on prediction confidence
-    - Proper train/test separation (no lookahead!)
-    - Logging and monitoring
+    Key features:
+    - Safe model loading (with fallbacks)
+    - Automatic feature engineering
+    - Probability-based signals with confidence thresholds
+    - Neutral signal on all failures
+    - Optional fallback to RSI strategy
     """
 
     default_params = {
         "model_name": "random_forest",
-        "confidence_threshold": 0.6,  # Only trade if prediction prob > 60%
-        "use_probability": True,  # Use predict_proba instead of hard predict
-        "min_feature_count": 10,  # Minimum features required
-        "fallback_to_rsi": True,  # Use RSI strategy if model fails
+        "confidence_threshold": 0.6,
+        "use_probability": True,
+        "min_feature_count": 10,
+        "fallback_to_rsi": True,
     }
 
-    def __init__(self, ticker: str, params: dict[str, Any] | None = None):
+    def __init__(self, ticker: str, params: Optional[dict[str, Any]] = None):
         super().__init__({**self.default_params, **(params or {})})
+
         self.ticker = ticker.upper()
         self.predictor = MLPredictor()
-        self.model = None
-        self.feature_names: list | None = None
+
+        self.model: Optional[Any] = None
+        self.feature_names: Optional[list[str]] = None
         self.last_prediction_date = None
 
+    # ----------------------------------------------------------------------
+    # Model Loading
+    # ----------------------------------------------------------------------
     def _load_model_safely(self) -> bool:
-        """Safely load the latest model with error handling"""
+        """Load ML model with error handling. Returns True if successful."""
         try:
-            self.model = self.predictor.load_latest(self.ticker, self.params["model_name"])
-            if self.model is not None:
-                logger.info(f"ML model loaded successfully for {self.ticker}")
-                return True
+            model = self.predictor.load_latest(
+                self.ticker,
+                self.params["model_name"]
+            )
+            if model is None:
+                logger.warning(f"No ML model found for {self.ticker}")
+                return False
+
+            self.model = model
+            logger.info(f"Loaded ML model for {self.ticker}")
+            return True
+
         except Exception as e:
-            logger.warning(f"Failed to load ML model for {self.ticker}: {e}")
+            logger.error(f"Error loading ML model for {self.ticker}: {e}")
+            self.model = None
+            return False
 
-        self.model = None
-        return False
-
+    # ----------------------------------------------------------------------
+    # Feature Preparation
+    # ----------------------------------------------------------------------
     def _prepare_features(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Ensure data has proper features"""
+        """Generate input features for prediction."""
         df = data.copy()
 
-        # If raw OHLCV, add technical features
-        if set(df.columns) <= {"Open", "High", "Low", "Close", "Volume"}:
+        # If only OHLCV is present → add indicators
+        if set(df.columns).issubset({"Open", "High", "Low", "Close", "Volume"}):
             df = FeatureEngineer.add_technical_features(df)
 
         # Drop non-feature columns
         feature_cols = [
-            col
-            for col in df.columns
-            if col not in {"Open", "High", "Low", "Close", "Volume", "Adj Close"}
+            c for c in df.columns
+            if c not in {"Open", "High", "Low", "Close", "Volume", "Adj Close"}
         ]
 
         if len(feature_cols) < self.params["min_feature_count"]:
-            logger.warning(f"Insufficient features for {self.ticker}: {len(feature_cols)} found")
+            logger.warning(
+                f"Feature count too small for {self.ticker}: {len(feature_cols)} found"
+            )
             return pd.DataFrame()
 
         X = df[feature_cols].dropna()
         self.feature_names = feature_cols
+
         return X
 
+    # ----------------------------------------------------------------------
+    # Signal Generation
+    # ----------------------------------------------------------------------
     def generate_signals(self, data: pd.DataFrame) -> pd.Series:
         """
-        Generate high-quality ML-based trading signals
+        Generates trading signals:
 
-        Returns:
-            +1 → Strong buy (high confidence long)
-             0 → Neutral / no confidence
-            -1 → Strong sell (high confidence short)
+            +1 → strong long
+             0 → neutral / not confident
+            -1 → strong short
         """
+
+        # Initialize all signals to 0
         signals = pd.Series(0, index=data.index, dtype=int)
 
-        # Load model if not already loaded
+        # 1. Load model if missing
         if self.model is None:
             if not self._load_model_safely():
+
+                # Optional: fallback to RSI
                 if self.params["fallback_to_rsi"]:
                     logger.info(f"Falling back to RSI strategy for {self.ticker}")
                     from .rsi_mean_reversion import RSIMeanReversionStrategy
 
-                    fallback = RSIMeanReversionStrategy()
-                    return fallback.generate_signals(data)
-                else:
-                    return signals  # All flat
+                    return RSIMeanReversionStrategy().generate_signals(data)
 
-        # Prepare features
-        X = self._prepare_features(data)
-        if X.empty or len(X) < 20:
-            logger.warning(f"Not enough valid data points for {self.ticker}")
+                return signals  # stay neutral
+
+        # If model still None → return flat
+        if self.model is None:
             return signals
 
-        try:
-            # Align predictions with original index
-            pred_index = X.index
+        # 2. Prepare features
+        X = self._prepare_features(data)
+        if X.empty or len(X) < 20:
+            logger.warning(f"Not enough feature rows for {self.ticker}")
+            return signals
 
-            if self.params["use_probability"] and hasattr(self.model, "predict_proba"):
-                # Use prediction probability for confidence
+        pred_index = X.index
+
+        try:
+            # ------------------------------------------------------------------
+            # Probability-based predictions
+            # ------------------------------------------------------------------
+            if (
+                self.params["use_probability"]
+                and hasattr(self.model, "predict_proba")
+            ):
                 probabilities = self.model.predict_proba(X)
-                # Assume binary classification: [prob_short, prob_long]
+
                 if probabilities.shape[1] == 2:
-                    prob_long = probabilities[:, 1]
                     prob_short = probabilities[:, 0]
+                    prob_long = probabilities[:, 1]
                 else:
-                    prob_long = probabilities[:, -1]  # multi-class fallback
+                    # multi-class fallback: treat the last column as "long"
+                    prob_long = probabilities[:, -1]
                     prob_short = 1 - prob_long
 
-                confidence_long = prob_long
-                confidence_short = prob_short
+                long_mask = prob_long >= self.params["confidence_threshold"]
+                short_mask = prob_short >= self.params["confidence_threshold"]
 
-                # Apply confidence threshold
-                long_signal = confidence_long >= self.params["confidence_threshold"]
-                short_signal = confidence_short >= self.params["confidence_threshold"]
+                signals.loc[pred_index[long_mask]] = 1
+                signals.loc[pred_index[short_mask]] = -1
 
-                signals.loc[pred_index[long_signal]] = 1
-                signals.loc[pred_index[short_signal]] = -1
+            # ------------------------------------------------------------------
+            # Hard predictions
+            # ------------------------------------------------------------------
+            elif hasattr(self.model, "predict"):
+                hard_pred = self.model.predict(X)
 
-                # Optional: size position by confidence (advanced)
-                # signals = signals * np.where(signals != 0, np.maximum(confidence_long, confidence_short), 1)
+                # Ensure valid output
+                hard_pred = pd.Series(hard_pred, index=pred_index).clip(-1, 1)
+                signals.loc[pred_index] = hard_pred.values
 
             else:
-                # Fallback to hard predictions
-                hard_pred = self.model.predict(X)
-                signals.loc[pred_index] = hard_pred
-
-            logger.info(
-                f"ML signals generated for {self.ticker}: "
-                f"Long={(signals==1).sum()}, Short={(signals==-1).sum()}, Flat={(signals==0).sum()}"
-            )
+                logger.error(f"Model for {self.ticker} has no predict() method.")
+                return signals
 
         except Exception as e:
-            logger.error(f"Error generating ML signals for {self.ticker}: {e}")
-            return signals  # Flat on error
+            logger.error(f"Prediction error for {self.ticker}: {e}")
+            return signals
 
-        return signals.astype(int)
+        logger.info(
+            f"Signals generated for {self.ticker}: "
+            f"Long={int((signals==1).sum())}, "
+            f"Short={int((signals==-1).sum())}, "
+            f"Flat={int((signals==0).sum())}"
+        )
 
+        return signals
+
+    # ----------------------------------------------------------------------
+    # String repr
+    # ----------------------------------------------------------------------
     def __repr__(self) -> str:
-        status = "loaded" if self.model else "not_loaded"
+        status = "loaded" if self.model is not None else "not_loaded"
         return f"MLRandomForestStrategy({self.ticker}, model={status})"
 
 
-# Quick test
+# For manual testing
 if __name__ == "__main__":
     from ..data.fetcher import DataFetcher
 
@@ -161,6 +198,6 @@ if __name__ == "__main__":
     signals = strategy.generate_signals(df)
 
     print("ML Strategy signals for AAPL:")
-    print(f"Total signals: {len(signals[signals != 0])} non-zero")
-    print(f"Current signal: {signals.iloc[-1]}")
+    print(f"Non-zero signals: {len(signals[signals != 0])}")
+    print(f"Latest signal: {signals.iloc[-1]}")
     print(signals.tail(10))

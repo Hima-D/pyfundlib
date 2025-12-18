@@ -70,12 +70,12 @@ class FeatureEngineer:
 
         # === 1. RSI ===
         if add_rsi:
-            df[f"rsi_{rsi_period}"] = rsi(close, period=rsi_period)
+            df[f"rsi_{rsi_period}"] = rsi(close, window=rsi_period)
 
         # === 2. Simple Moving Averages ===
         if add_sma:
             for period in sma_periods:
-                df[f"sma_{period}"] = sma(close, period=period)
+                df[f"sma_{period}"] = sma(close, window=period)
                 if period >= 20:  # Common crossovers
                     df[f"close_vs_sma_{period}"] = close / df[f"sma_{period}"] - 1.0
 

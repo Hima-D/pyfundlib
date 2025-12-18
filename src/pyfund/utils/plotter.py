@@ -5,17 +5,19 @@ from pathlib import Path
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
+from matplotlib import figure
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from cycler import cycler
 
-# Set a clean, professional style once
 plt.style.use("seaborn-v0_8-whitegrid")
 sns.set_palette("deep")
 plt.rcParams["figure.figsize"] = (14, 8)
-plt.rcParams["axes.prop_cycle"] = plt.cycler(
+plt.rcParams["axes.prop_cycle"] = cycler(
     color=["#2E86AB", "#A23B72", "#F18F01", "#C73E1D", "#4C9A2A"]
 )
+
 
 
 class Plotter:
@@ -31,7 +33,7 @@ class Plotter:
         title: str = "Strategy Equity Curve",
         save_path: Path | None = None,
         show: bool = True,
-    ) -> plt.Figure:
+    ) -> figure.Figure:
         """
         Plot equity curve with optional benchmark and trade markers.
         """
@@ -101,7 +103,7 @@ class Plotter:
         equity: pd.Series,
         title: str = "Drawdown Waterfall",
         save_path: Path | None = None,
-    ) -> plt.Figure:
+    ) -> figure.Figure:
         cum_ret = (1 + equity.pct_change()).cumprod()
         running_max = cum_ret.cummax()
         drawdown = (cum_ret - running_max) / running_max
@@ -125,7 +127,7 @@ class Plotter:
         returns: pd.Series,
         title: str = "Daily Returns Distribution",
         save_path: Path | None = None,
-    ) -> plt.Figure:
+    ) -> figure.Figure:
         fig, ax = plt.subplots(figsize=(12, 7))
         returns.hist(bins=80, alpha=0.8, color="#2E86AB", edgecolor="white", ax=ax)
         ax.axvline(returns.mean(), color="green", linewidth=2, label=f"Mean: {returns.mean():.2%}")
@@ -154,7 +156,7 @@ class Plotter:
         window: int = 252,
         title: str = "Rolling Sharpe Ratio (252d)",
         save_path: Path | None = None,
-    ) -> plt.Figure:
+    ) -> figure.Figure:
         rolling_sharpe = (
             returns.rolling(window).mean() / returns.rolling(window).std() * np.sqrt(252)
         )

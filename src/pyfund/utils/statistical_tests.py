@@ -55,8 +55,12 @@ class StatisticalValidator:
         ]
         trials = [t for t in trials if t > 0]
         if not trials:
-            return observed
-        return max(0.0, (observed - max(trials)) / (np.std(trials) or 1.0))
+            return float(observed)
+        observed_f = float(observed)
+        best_trial = float(max(trials))
+        std_trials = float(np.std(trials))
+        denom = std_trials if std_trials != 0.0 else 1.0
+        return max(0.0, (observed_f - best_trial) / denom)
 
     def probability_of_backtest_overfitting(self, equity: np.ndarray) -> float:
         equity = np.asarray(equity).flatten()

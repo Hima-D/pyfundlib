@@ -75,7 +75,7 @@ class Broker(ABC):
         """
 
     @abstractmethod
-    def get_balance(self) -> dict[str | float]:
+    def get_balance(self) -> dict[str, float]:
         """Return cash + margin balances"""
 
     @abstractmethod
@@ -164,8 +164,66 @@ class Broker(ABC):
 
 # Example usage in live trading
 if __name__ == "__main__":
-    # This will work with ANY broker that implements this interface
-    with Broker(mode="paper") as broker:
+    # Provide a minimal concrete Broker implementation for example/testing purposes
+    class DummyBroker(Broker):
+        def connect(self) -> None:
+            self.is_connected = True
+            logger.info(f"{self.__class__.__name__} connected")
+
+        def disconnect(self) -> None:
+            self.is_connected = False
+            logger.info(f"{self.__class__.__name__} disconnected")
+
+        def get_price(
+            self,
+            ticker: str,
+            period: str | None = None,
+            interval: str | None = None,
+            start_date: str | None = None,
+            end_date: str | None = None,
+        ) -> pd.DataFrame:
+            # Return a small synthetic OHLCV DataFrame
+            idx = pd.date_range(end=pd.Timestamp.now(), periods=5, freq="T")
+            data = {
+                "Open": [100, 101, 102, 103, 104],
+                "High": [101, 102, 103, 104, 105],
+                "Low": [99, 100, 101, 102, 103],
+                "Close": [100.5, 101.5, 102.5, 103.5, 104.5],
+                "Volume": [1000, 1100, 1200, 1300, 1400],
+            }
+            df = pd.DataFrame(data, index=idx)
+            df.index.name = "Datetime"
+            return df
+
+        def get_balance(self) -> dict[str, float]:
+            return {"cash": 100000.0, "margin": 0.0}
+
+        def get_positions(self) -> dict[str, dict[str, Any]]:
+            return {}
+
+        def place_order(
+            self,
+            ticker: str,
+            qty: float,
+            side: OrderSide,
+            order_type: OrderType = "market",
+            price: float | None = None,
+            time_in_force: TimeInForce = "day",
+            tag: str | None = None,
+        ) -> dict[str, Any]:
+            return {"order_id": "DUMMY-1", "ticker": ticker, "qty": qty, "side": side, "status": "filled"}
+
+        def cancel_order(self, order_id: str) -> bool:
+            return True
+
+        def cancel_all_orders(self) -> int:
+            return 0
+
+        def get_open_orders(self) -> list[dict[str, Any]]:
+            return []
+
+    # Use DummyBroker for the example so we don't instantiate the abstract base class
+    with DummyBroker(mode="paper") as broker:
         df = broker.get_price("RELIANCE")
         print(df.tail())
         balance = broker.get_balance()

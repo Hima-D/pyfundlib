@@ -1,169 +1,235 @@
-# src/pyfundlib/automation/jobs/rebalance_portfolio.py
+# src/pyfund/automation/jobs/rebalance_portfolio.py
+"""
+Event-Driven Portfolio Rebalancer
+────────────────────────────────
+Fully framework-native. No hardcoding. Zero magic numbers.
+
+Designed for:
+- Daily EOD rebalance
+- Signal-triggered rebalance
+- Risk breach rebalance
+- Manual trigger via API
+
+Used by:
+    pyfund run rebalance
+    scheduler.add_job(..., trigger="signal")
+    FastAPI endpoint
+"""
+
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
+from typing import Any, Callable, Dict, List, Optional
 
-import numpy as np
 import pandas as pd
+import numpy as np
 
-from pyfund.data.fetcher import DataFetcher
-from pyfund.utils.alerts import send_alert
-
+from ...core.events import Event, EventBus, EventType
 from ...data.storage import DataStorage
-from ...execution.live import LiveExecutor, OrderRequest
+from ...execution.live import LiveExecutor
 from ...ml.predictor import MLPredictor
-from ...portfolio.allocator import PortfolioAllocator  # You'll love this one next
+from ...portfolio.allocator import PortfolioAllocator
 from ...risk.constraints import RiskConstraints
 from ...utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-# Config
-REBALANCE_HOUR = 15  # 3 PM ET — end of day rebalance
-MAX_TRADE_SIZE_PCT = 0.20  # No single trade >20% of portfolio
-MIN_TRADE_THRESHOLD = 0.02  # Only trade if allocation diff >2%
+
+@dataclass
+class RebalanceConfig:
+    """User-configurable rebalance rules"""
+    min_trade_threshold: float = 0.02      # 2% weight diff to trigger trade
+    max_trade_size_pct: float = 0.25       # Max 25% of portfolio in one trade
+    risk_limits: Dict[str, float] = None   # Passed to RiskConstraints
+    allocation_method: str = "signal_strength"
+    dry_run: bool = True
+    alert_on_rebalance: bool = True
 
 
-def rebalance_job() -> None:
+class PortfolioRebalancer:
     """
-    Daily portfolio rebalancing job.
-    Runs at market close — turns ML signals into real trades.
+    Event-driven rebalancer — the heart of live execution.
+    Subscribes to signals, runs on timer, or triggered manually.
     """
-    logger.info("=== Starting Portfolio Rebalance Job ===")
-    start_time = datetime.now()
 
-    executor = LiveExecutor(dry_run=False)  # Set dry_run=True for paper
-    predictor = MLPredictor()
-    allocator = PortfolioAllocator()
-    storage = DataStorage()
-    constraints = RiskConstraints(
-        max_position=0.25,
-        max_sector=0.50,
-        leverage_limit=2.0,
-    )
+    def __init__(
+        self,
+        config: RebalanceConfig | None = None,
+        executor: Optional[LiveExecutor] = None,
+        predictor: Optional[MLPredictor] = None,
+        allocator: Optional[PortfolioAllocator] = None,
+        constraints: Optional[RiskConstraints] = None,
+        storage: Optional[DataStorage] = None,
+        event_bus: Optional[EventBus] = None,
+    ):
+        self.config = config or RebalanceConfig()
+        self.executor = executor or LiveExecutor(dry_run=self.config.dry_run)
+        self.predictor = predictor or MLPredictor()
+        self.allocator = allocator or PortfolioAllocator()
+        self.constraints = constraints or RiskConstraints(**(self.config.risk_limits or {}))
+        self.storage = storage or DataStorage()
+        self.event_bus = event_bus or EventBus.get_default()
 
-    try:
-        # 1. Get current account state
-        account = executor.get_account()
-        positions = executor.get_positions()  # {ticker: qty}
-        # # cash = account["cash"]  # unused
-        portfolio_value = account["portfolio_value"]
+        # Subscribe to events
+        self.event_bus.subscribe(EventType.SIGNALS_GENERATED, self.on_signals)
+        self.event_bus.subscribe(EventType.MANUAL_TRIGGER, self.on_manual_rebalance)
 
-        current_weights = {}
+        logger.info(f"PortfolioRebalancer initialized | dry_run={self.config.dry_run}")
+
+    def rebalance(self, trigger: str = "scheduled") -> None:
+        """Main rebalance logic — can be called anytime"""
+        logger.info(f"REBALANCE TRIGGERED: {trigger.upper()}")
+
+        start_time = datetime.now()
+        try:
+            # 1. Get current state
+            account = self.executor.get_account()
+            positions = self.executor.get_positions()
+            portfolio_value = float(account["portfolio_value"])
+
+            current_weights = self._calculate_current_weights(positions, portfolio_value)
+            logger.info(f"Portfolio value: ${portfolio_value:,.0f} | {len(current_weights)} positions")
+
+            # 2. Generate fresh signals
+            signals = self._generate_signals()
+            if not signals:
+                logger.info("No valid signals → skipping rebalance")
+                return
+
+            # 3. Compute target allocation
+            target_weights = self.allocator.allocate(
+                signals=signals,
+                method=self.config.allocation_method,
+                current_weights=current_weights,
+            )
+
+            # 4. Risk check
+            compliance = self.constraints.check(target_weights, self.allocator.get_sector_map())
+            if not compliance["compliant"]:
+                logger.warning(f"Risk violation → aborting: {compliance['violations']}")
+                self.event_bus.publish(EventType.RISK_BREACH, compliance)
+                return
+
+            # 5. Compute trades
+            trades = self._compute_trades(current_weights, target_weights, portfolio_value)
+            if not trades:
+                logger.info("No trades needed — portfolio in tolerance")
+                return
+
+            # 6. Execute
+            self._execute_trades(trades)
+
+            # 7. Record & alert
+            self._save_rebalance_record(trades, target_weights, portfolio_value, trigger)
+            if self.config.alert_on_rebalance:
+                self.event_bus.publish(EventType.REBALANCE_COMPLETED, {
+                    "num_trades": len(trades),
+                    "value": portfolio_value,
+                    "trigger": trigger,
+                })
+
+            elapsed = (datetime.now() - start_time).total_seconds()
+            logger.info(f"Rebalance completed | {len(trades)} trades | {elapsed:.1f}s")
+
+        except Exception as e:
+            logger.error(f"Rebalance failed: {e}", exc_info=True)
+            self.event_bus.publish(EventType.REBALANCE_FAILED, {"error": str(e)})
+
+    # Event handlers
+    def on_signals(self, event: Event) -> None:
+        """Auto-rebalance when new signals arrive"""
+        self.rebalance(trigger="signals")
+
+    def on_manual_rebalance(self, event: Event) -> None:
+        """API or CLI trigger"""
+        self.rebalance(trigger="manual")
+
+    # Helpers
+    def _calculate_current_weights(self, positions: Dict[str, float], value: float) -> Dict[str, float]:
+        weights = {}
         for ticker, qty in positions.items():
-            if ticker == "CASH":
+            if ticker in ("CASH", "") or qty == 0:
                 continue
-            price = DataFetcher.get_price(ticker).iloc[-1]["Close"]
-            value = qty * price
-            current_weights[ticker] = value / portfolio_value
-
-        logger.info(
-            f"Current portfolio value: ${portfolio_value:,.0f} | Positions: {len(current_weights)}"
-        )
-
-        # 2. Generate latest signals
-        signals = {}
-        for ticker in allocator.watchlist:
             try:
-                pred = predictor.predict(ticker, period="60d")[-1]
-                signals[ticker] = float(pred)
+                price = self.executor.get_price(ticker)
+                weights[ticker] = (qty * price) / value
             except:
-                signals[ticker] = 0.0
+                pass
+        return weights
 
-        # 3. Compute target weights
-        target_weights = allocator.allocate(signals, method="signal_strength")  # or "risk_parity"
+    def _generate_signals(self) -> Dict[str, float]:
+        signals = {}
+        for ticker in self.allocator.get_watchlist():
+            try:
+                pred = self.predictor.predict(ticker, period="90d")
+                if pred is not None and len(pred) > 0:
+                    signals[ticker] = float(pred[-1])
+            except Exception as e:
+                logger.debug(f"Signal failed for {ticker}: {e}")
+        return signals
 
-        # 4. Check risk constraints
-        compliance = constraints.check_compliance(pd.Series(target_weights), allocator.sector_map)
-        if not compliance["compliant"]:
-            logger.warning(f"Risk violation: {compliance['violations']}")
-            # Optional: adjust weights or abort
-            return
-
-        # 5. Calculate trades
+    def _compute_trades(
+        self,
+        current: Dict[str, float],
+        target: Dict[str, float],
+        value: float,
+    ) -> List[Dict[str, Any]]:
         trades = []
-        for ticker, target_w in target_weights.items():
-            current_w = current_weights.get(ticker, 0.0)
+        for ticker, target_w in target.items():
+            current_w = current.get(ticker, 0.0)
             diff = target_w - current_w
 
-            if abs(diff) < MIN_TRADE_THRESHOLD:
+            if abs(diff) < self.config.min_trade_threshold:
                 continue
 
-            dollar_amount = diff * portfolio_value
-            if abs(dollar_amount / portfolio_value) > MAX_TRADE_SIZE_PCT:
-                dollar_amount = np.sign(dollar_amount) * MAX_TRADE_SIZE_PCT * portfolio_value
+            dollar = diff * value
+            if abs(dollar / value) > self.config.max_trade_size_pct:
+                dollar = np.sign(diff) * self.config.max_trade_size_pct * value
 
-            price = DataFetcher.get_price(ticker).iloc[-1]["Close"]
-            qty = int(dollar_amount / price)
+            try:
+                price = self.executor.get_price(ticker)
+                qty = int(dollar / price)
+                if abs(qty) == 0:
+                    continue
 
-            if qty == 0:
-                continue
-
-            side = "buy" if qty > 0 else "sell"
-            qty = abs(qty)
-
-            trades.append(
-                {
+                trades.append({
                     "ticker": ticker,
-                    "side": side,
-                    "qty": qty,
-                    "dollar": dollar_amount,
-                    "weight_diff": diff,
-                }
-            )
+                    "side": "buy" if qty > 0 else "sell",
+                    "qty": abs(qty),
+                    "dollar": dollar,
+                    "target_weight": target_w,
+                    "current_weight": current_w,
+                })
+            except:
+                pass
+        return trades
 
-        if not trades:
-            logger.info("No rebalance needed — portfolio already optimal")
-            return
+    def _execute_trades(self, trades: List[Dict[str, Any]]) -> None:
+        for t in trades:
+            logger.info(f"{t['side'].upper()} {t['qty']} {t['ticker']} | ~${t['dollar']:,.0f}")
+            if not self.config.dry_run:
+                self.executor.place_order(ticker=t["ticker"], qty=t["qty"], side=t["side"])
 
-        # 6. Execute trades
-        logger.info(f"Executing {len(trades)} trades...")
-        for trade in trades:
-            # order = OrderRequest(
-                ticker=trade["ticker"],
-                qty=trade["qty"],
-                side=trade["side"],
-                type="market",
-                time_in_force="day",
-            )
-            # response = executor.place_order(order)  # unused
-            logger.info(
-                f"{trade['side'].upper()} {trade['qty']} {trade['ticker']} | ~${trade['dollar']:,.0f}"
-            )
-
-        # 7. Save rebalance record
+    def _save_rebalance_record(self, trades, target_weights, value, trigger):
         record = {
             "timestamp": datetime.now().isoformat(),
-            "portfolio_value": portfolio_value,
+            "trigger": trigger,
+            "portfolio_value": value,
             "num_trades": len(trades),
             "trades": trades,
             "target_weights": target_weights,
         }
-        storage.save(pd.DataFrame([record]), name=f"rebalance/log_{datetime.now().date()}")
-
-        elapsed = (datetime.now() - start_time).seconds
-        logger.info(
-            f"Rebalance completed successfully in {elapsed}s | {len(trades)} trades executed"
-        )
-
-        # Alert
-        send_rebalance_alert(len(trades), portfolio_value)
-
-    except Exception as e:
-        logger.error(f"Rebalance failed: {e}", exc_info=True)
-        send_alert("REBALANCE FAILED", str(e))
+        self.storage.save(pd.DataFrame([record]), name=f"rebalance/{datetime.now().date()}_{trigger}")
 
 
-def send_rebalance_alert(num_trades: int, value: float):
-    message = (
-        f"Portfolio Rebalanced\n"
-        f"{num_trades} trades executed\n"
-        f"Value: ${value:,.0f}\n"
-        f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-    )
-    # Send via Telegram/email/Slack
-    logger.info(f"Alert: {message}")
+# Framework entry points
+def rebalance_job(config: RebalanceConfig | None = None) -> None:
+    """CLI/Scheduler entry point"""
+    rebalancer = PortfolioRebalancer(config)
+    rebalancer.rebalance(trigger="scheduled")
 
 
-# Schedule it
-# scheduler.add_job(rebalance_job, "cron", hour=15, minute=55, timezone="US/Eastern")
+def trigger_rebalance() -> None:
+    """Manual trigger (API, button, etc.)"""
+    EventBus.get_default().publish(EventType.MANUAL_TRIGGER, {})

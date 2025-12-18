@@ -33,34 +33,38 @@ class ARIMAGARCHStrategy:
         self.min_periods = min_periods
 
     def _prepare_series(self, prices: pd.Series) -> pd.Series:
-        return np.log(prices) if self.use_log_prices else prices.copy()
+        if self.use_log_prices:
+            return pd.Series(np.log(prices.to_numpy()), index=prices.index)
+        return prices.copy()
 
-    def fit_forecast(self, prices: pd.Series) -> tuple[float, float | float]:
+    def fit_forecast(self, prices: pd.Series) -> tuple[float, float, float]:
         if len(prices) < self.min_periods:
-            return prices.iloc[-1], prices.std(), prices.std()
+            return float(prices.iloc[-1]), float(prices.std()), float(prices.std())
 
         series = self._prepare_series(prices)[-self.lookback :]
 
         try:
             model = ARIMA(series, order=(self.p, self.d, self.q))
-            fitted = model.fit(method="statespace", disp=0)
-            forecast = fitted.forecast(steps=1).iloc[0]
+            fitted = model.fit(method="statespace")  # Remove disp=0
+            forecast_series = fitted.forecast(steps=1)
+            forecast = float(forecast_series.iloc[0])
             residuals = fitted.resid[-self.lookback // 2 :]
 
             if len(residuals) > 50 and residuals.std() > 1e-8:
                 garch = arch_model(
-                    residuals, vol="Garch", p=self.garch_p, q=self.garch_q, dist="Normal"
+                    residuals, vol="GARCH", p=self.garch_p, q=self.garch_q, dist="normal"  # Uppercase GARCH, lowercase normal
                 )
                 garch_fit = garch.fit(disp="off")
-                cond_vol = np.sqrt(garch_fit.conditional_volatility.iloc[-1])
+                cond_vol = float(np.sqrt(np.asarray(garch_fit.conditional_volatility)[-1]))
             else:
-                cond_vol = residuals.std()
+                cond_vol = float(residuals.std())
 
-            residual_std = residuals.std() if len(residuals) > 0 else cond_vol
+            residual_std = float(residuals.std()) if len(residuals) > 0 else cond_vol
 
         except Exception:
-            forecast = series.iloc[-1]
-            cond_vol = series.pct_change().std() if len(series) > 10 else series.std()
+            forecast = float(series.iloc[-1])
+            pct_change_std = series.pct_change().std()
+            cond_vol = float(pct_change_std) if len(series) > 10 else float(series.std())
             residual_std = cond_vol
 
         return forecast, residual_std, cond_vol

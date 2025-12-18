@@ -3,14 +3,14 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Literal, Union
+from typing import Any, Literal, Union, Optional
 
 import numpy as np
 import pandas as pd
 
 from ..utils.logger import logger
 
-Signal = (int | float]  # 1.0 = full long, -1.0 = full short, 0.5 = half long, etc.
+Signal = Union[int, float]  # 1.0 = full long, -1.0 = full short, 0.5 = half long, etc.
 PositionSide = Literal["long", "short", "flat"]
 
 
@@ -22,7 +22,7 @@ class SignalResult:
     positions: pd.Series | None = None  # Position after entry/exit rules
     entries: pd.Series | None = None  # True on new entries
     exits: pd.Series | None = None  # True on exits
-    metadata: dict[str, Any | None = None  # Extra info (confidence, z-score, etc.)
+    metadata: dict[str, Any] | None = None  # Extra info (confidence, z-score, etc.)
 
     def __post_init__(self):
         if self.metadata is None:

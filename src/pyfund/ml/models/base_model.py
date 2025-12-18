@@ -5,7 +5,8 @@ from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
+from typing import Literal
 
 import cloudpickle
 import numpy as np
@@ -30,7 +31,7 @@ class ModelMetadata:
     training_samples: int | None = None
     features_used: list[str] | None = None
     target_column: str | None = None
-    performance_metrics: dict[str | float] | None = None
+    performance_metrics: dict[str, float] | None = None
     hyperparameters: dict[str, Any] | None = None
     status: ModelStatus = "untrained"
     tags: list[str] | None = None
@@ -71,6 +72,8 @@ class BaseMLModel(ABC):
 
         self._is_fitted = False
         self.feature_names_in_: list[str] | None = None
+        self._last_X: pd.DataFrame | None = None
+        self._last_y: pd.Series | np.ndarray | None = None
 
     # ======================= Core Abstract Methods =======================
     @abstractmethod
@@ -176,13 +179,16 @@ class BaseMLModel(ABC):
         try:
             import mlflow
             from mlflow.models import infer_signature
+            import mlflow.pyfunc  # For generic pyfunc logging
 
             with mlflow.start_run(
                 run_name=run_name or f"{self.name}_{datetime.now().strftime('%Y%m%d_%H%M')}"
-            ):
+            ) as run:
                 mlflow.log_params(self.get_params())
                 if self.metadata.performance_metrics:
-                    mlflow.log_metrics(self.metadata.performance_metrics)
+                    # Fix: Ensure keys are str for log_metrics
+                    metrics_dict = {str(k): float(v) for k, v in self.metadata.performance_metrics.items()}
+                    mlflow.log_metrics(metrics_dict)
                 mlflow.set_tags(
                     {
                         "model_name": self.name,
@@ -193,12 +199,23 @@ class BaseMLModel(ABC):
                 )
 
                 # Auto-infer signature if possible
-                if hasattr(self, "_last_X") and hasattr(self, "_last_y"):
-                    signature = infer_signature(self._last_X, self.predict(self._last_X))
-                    mlflow.sklearn.log_model(self, artifact_path="model", signature=signature)
+                if self._last_X is not None and self._last_y is not None:
+                    predictions = self.predict(self._last_X)
+                    signature = infer_signature(self._last_X, predictions)
+                    mlflow.pyfunc.log_model(
+                        artifact_path="model",
+                        python_model=self,
+                        signature=signature,
+                        input_example=self._last_X.iloc[:1] if hasattr(self._last_X, "iloc") else self._last_X[:1],
+                    )
                 else:
-                    mlflow.sklearn.log_model(self, artifact_path="model")
+                    mlflow.pyfunc.log_model(
+                        artifact_path="model",
+                        python_model=self,
+                    )
 
-                logger.info(f"Model logged to MLflow → run: {mlflow.active_run().info.run_id}")
+                logger.info(f"Model logged to MLflow → run: {run.info.run_id}")
         except ImportError:
             logger.warning("MLflow not installed. Run `pip install mlflow` to enable logging.")
+        except Exception as e:
+            logger.error(f"MLflow logging failed: {e}")
