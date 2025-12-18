@@ -3,57 +3,68 @@ import os
 import sys
 from datetime import datetime
 
-# Add project root to path so Sphinx can import pyfundlib
-sys.path.insert(0, os.path.abspath(".."))
+# -- Path setup --------------------------------------------------------------
+# Add src/ directory so Sphinx can import pyfund
 sys.path.insert(0, os.path.abspath("../src"))
 
 # -- Project information -----------------------------------------------------
 project = "PyFundLib"
-copyright = f"{datetime.now().year}, Himanshu Dixit"
 author = "Himanshu Dixit"
-release = "1.0.0"
+copyright = f"{datetime.now().year}, {author}"
+
+# For release versions, you can use hatch or manually set
+release = "0.1.6"
 
 # -- General configuration ---------------------------------------------------
 extensions = [
-    "sphinx.ext.autodoc",
-    "sphinx.ext.viewcode",
-    "sphinx.ext.napoleon",  # Google/NumPy style docstrings
-    "sphinx.ext.intersphinx",
-    "sphinx.ext.autosummary",
-    "sphinx_autodoc_typehints",  # Beautiful type hints
-    "myst_parser",  # Markdown support
-    "sphinx_copybutton",  # Copy code buttons
-    "sphinxext.opengraph",  # Sexy social previews
+    "sphinx.ext.autodoc",           # Extract docstrings
+    "sphinx.ext.napoleon",          # Google / NumPy style
+    "sphinx.ext.viewcode",          # Link to source code
+    "sphinx.ext.autosummary",       # Generate summary tables
+    "sphinx_autodoc_typehints",     # Show type hints in docs
+    "myst_parser",                  # Markdown support
+    "sphinx_copybutton",            # Copy code button
+    "sphinxext.opengraph",          # OpenGraph social previews
+    "autoapi.extension",            # Automatic API documentation
 ]
 
+# Templates and static
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
-# Napoleon settings (Google style docstrings)
-napoleon_google_docstring = True
-napoleon_numpy_docstring = True
-napoleon_include_init_with_doc = False
-napoleon_include_private_with_doc = False
-napoleon_include_special_with_doc = True
-napoleon_use_admonition_for_examples = False
-napoleon_use_admonition_for_notes = False
-napoleon_use_admonition_for_references = False
-napoleon_use_ivar = True
-napoleon_use_param = True
-napoleon_use_rtype = True
+# Autosummary settings
+autosummary_generate = True
+
+# Autodoc settings
+autodoc_default_options = {
+    "members": True,
+    "member-order": "bysource",
+    "undoc-members": True,
+    "show-inheritance": True,
+    "exclude-members": "__weakref__, __dict__, __module__",
+}
 
 # Type hints
 set_type_checking_flag = True
 typehints_fully_qualified = False
 always_document_param_types = True
 
-# -- Options for HTML output -------------------------------------------------
-html_theme = "furo"  # The most beautiful modern theme
+# Napoleon settings
+napoleon_google_docstring = True
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = True
+napoleon_include_private_with_doc = False
+napoleon_include_special_with_doc = True
+napoleon_use_admonition_for_examples = False
+napoleon_use_param = True
+napoleon_use_rtype = True
+
+# -- HTML output -------------------------------------------------------------
+html_theme = "furo"
 html_static_path = ["_static"]
 html_title = "PyFundLib ⚡"
-html_logo = "_static/logo.png"  # Add your logo!
+html_logo = "_static/logo.png"
 html_favicon = "_static/favicon.ico"
-
 html_theme_options = {
     "sidebar_hide_name": False,
     "light_css_variables": {
@@ -67,16 +78,13 @@ html_theme_options = {
     "announcement": "<b>🚀 PyFundLib 1.0 is here!</b> The future of open-source quant trading.",
 }
 
-# Furo is amazing — install with:
-# pip install furo sphinx-autodoc-typehints sphinx-copybutton sphinxext-opengraph myst-parser
-
-# -- OpenGraph (social sharing) ---------------------------------------------
+# OpenGraph
 ogp_site_url = "https://pyfundlib.com"
-ogp_image = "_static/og-image.png"  # 1200x630 recommended
+ogp_image = "_static/og-image.png"
 ogp_description_length = 200
 ogp_type = "website"
 
-# -- MyST Parser (Markdown support) -----------------------------------------
+# MyST Parser (Markdown support)
 myst_enable_extensions = [
     "amsmath",
     "colon_fence",
@@ -85,18 +93,19 @@ myst_enable_extensions = [
     "html_image",
 ]
 
-# -- Autodoc settings -------------------------------------------------------
-autodoc_default_options = {
-    "members": True,
-    "member-order": "bysource",
-    "special-members": "__init__",
-    "undoc-members": True,
-    "exclude-members": "__weakref__",
-}
+# AutoAPI configuration: scan all subpackages
+autoapi_type = "python"
+autoapi_dirs = ["../src/pyfund"]
+autoapi_options = [
+    "members",
+    "undoc-members",
+    "show-inheritance",
+    "show-module-summary",
+]
+autoapi_keep_files = True
+autoapi_add_toctree_entry = True
 
-autosummary_generate = True
-
-# -- Intersphinx ------------------------------------------------------------
+# Intersphinx mapping for cross-references
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "pandas": ("https://pandas.pydata.org/docs/", None),
@@ -104,3 +113,5 @@ intersphinx_mapping = {
     "torch": ("https://pytorch.org/docs/stable/", None),
     "xgboost": ("https://xgboost.readthedocs.io/en/latest/", None),
 }
+
+# -- End of configuration ----------------------------------------------------
