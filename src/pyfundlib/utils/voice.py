@@ -17,6 +17,7 @@ import pyttsx3
 
 from pyfundlib.config import settings
 from pyfundlib.utils.logger import get_logger
+from pyfundlib.agents.voice_router import VoiceCommandRouter
 
 logger = get_logger(__name__)
 
@@ -31,10 +32,11 @@ class VoiceInterface:
         self.use_elevenlabs = use_elevenlabs
         if use_elevenlabs and settings.api_key:
             set_api_key(settings.api_key)
-        
+
         # Initialize pyttsx3 as fallback
         self.engine = pyttsx3.init()
         self.engine.setProperty("rate", 175)  # Slightly faster for professional feel
+        self.router = VoiceCommandRouter()
 
     def transcribe(self, audio_path: str) -> str:
         """Transcribe audio to text using OpenAI Whisper"""
@@ -73,6 +75,17 @@ class VoiceInterface:
             logger.error("speech_synthesis_failed", error=str(e))
             # Fallback to print
             print(f"[VOICE] {text}")
+
+    def handle_audio_command(self, audio_path: str) -> str:
+        text = self.transcribe(audio_path)
+        if not text:
+            msg = "I could not understand the audio clearly."
+            self.speak(msg)
+            return msg
+
+        result = self.router.handle(text)
+        self.speak(result.response)
+        return result.response
 
 
 # Alias for backward compatibility and easier access

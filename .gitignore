@@ -44,3 +44,7 @@ venv.bak/
 .mlflow/
 models/*.pkl
 .env
+cache/
+mlruns/
+test_debug.txt
+test_output.txt
