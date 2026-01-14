@@ -11,7 +11,7 @@ import pandas as pd
 from pyfundlib.data.fetcher import DataFetcher
 from pyfundlib.reporting.perf_report import PerformanceReport
 from pyfundlib.risk import RiskManager
-from pyfundlib.strategies.base import BaseStrategy
+from pyfundlib.strategies.base import BaseStrategy, SignalResult
 from pyfundlib.utils.logger import get_logger
 from pyfundlib.utils.plotter import Plotter
 
@@ -68,9 +68,15 @@ class Backtester:
         """Run the full backtest"""
         logger.info(f"Starting backtest: {self.name} on {self.strategy.__class__.__name__}")
 
-        # Generate signals (-1, 0, +1)
-        signals = self.strategy.generate_signals(self.data)
-        signals = signals.shift(1).fillna(0)  # No lookahead!
+        raw_output = self.strategy.generate_signals(self.data)
+
+        if isinstance(raw_output, SignalResult):
+            core = raw_output.positions if raw_output.positions is not None else raw_output.signals
+        else:
+            core = raw_output
+
+        signals = pd.Series(core, index=self.data.index).astype(float)
+        signals = signals.shift(1).fillna(0)
 
         # Apply position sizing
         position = signals * self.position_sizing

@@ -30,6 +30,7 @@ from .market_making import MarketMakingStrategy
 
 # === Machine Learning ===
 from .ml_random_forest import MLRandomForestStrategy
+from .time_series_momentum import TimeSeriesMomentumStrategy
 
 # === Statistical & Quantitative ===
 from .pairs_trading import PairsTradingStrategy
@@ -56,6 +57,7 @@ __all__ = [
     "TriangularArbitrageStrategy",
     # ML
     "MLRandomForestStrategy",
+    "TimeSeriesMomentumStrategy",
     # HFT
     "HFTMicroReversionStrategy",
     "MarketMakingStrategy",
@@ -77,6 +79,7 @@ STRATEGY_REGISTRY = {
     "pairs": PairsTradingStrategy,
     "triangular_arb": TriangularArbitrageStrategy,
     "ml_rf": MLRandomForestStrategy,
+    "ts_momentum": TimeSeriesMomentumStrategy,
     "hft_micro": HFTMicroReversionStrategy,
     "market_making": MarketMakingStrategy,
     "earning_drift": EarningDriftStrategy,

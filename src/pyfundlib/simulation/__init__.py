@@ -141,7 +141,7 @@ class MarketSimulator:
     @staticmethod
     def stress_scenario(
         returns: pd.Series,
-        scenarios: dict[str, Union[Sequence[float], None] = None,
+        scenarios: Optional[dict[str, Sequence[float]]] = None,
     ) -> pd.DataFrame:
         """
         Pre-defined historical stress scenarios.
@@ -156,8 +156,7 @@ class MarketSimulator:
             }
 
         results = {}
-        # equity = 1.0
-        base_# equity = (1 + returns).cumprod()
+        base_equity = (1 + returns).cumprod()
 
         for name, shocks in scenarios.items():
             shocked_returns = returns.copy()
@@ -199,6 +198,8 @@ class StrategySimulator:
         rng = np.random.default_rng(seed)
         results = []
 
+        returns = df["Close"].pct_change().fillna(0)
+
         for _ in range(n_trials):
             params = {}
             for param, dist in param_distributions.items():
@@ -207,17 +208,19 @@ class StrategySimulator:
                 else:
                     params[param] = rng.choice(dist)
 
-            strategy = strategy_class(**params)
+            strategy = strategy_class(params)
             signals = strategy.generate_signals(df)
-            # equity = (1 + signals.shift(1) * df["Close"].pct_change()).cumprod()
+
+            shifted_signals = signals.shift(1).fillna(0)
+            equity = (1 + shifted_signals * returns).cumprod()
 
             results.append(
                 {
                     **params,
-                    "total_return": equity.iloc[-1] - 1,
-                    "cagr": (equity.iloc[-1]) ** (252 / len(equity)) - 1,
-                    "max_dd": ((equity.cummax() - equity) / equity.cummax()).max(),
-                    "sharpe": equity.pct_change().mean() / equity.pct_change().std() * np.sqrt(252),
+                    "total_return": float(equity.iloc[-1] - 1),
+                    "cagr": float(equity.iloc[-1] ** (252 / len(equity)) - 1),
+                    "max_dd": float(((equity.cummax() - equity) / equity.cummax()).max()),
+                    "sharpe": float(equity.pct_change().mean() / equity.pct_change().std() * np.sqrt(252)),
                 }
             )
 
